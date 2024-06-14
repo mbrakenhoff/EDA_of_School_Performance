@@ -1,0 +1,466 @@
+---
+title: "An Exploration of School Performance"
+author: "Michael Brakenhoff"
+date: 
+output: 
+  html_document:
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+setwd("C:/Users/brake/OneDrive/Documents/Masters/824 Data Visuals/Semester Project")
+library(readxl)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(knitr)
+
+
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(fig.align = "center")
+
+
+out_type <- knitr::opts_knit$get("rmarkdown.pandoc.to")
+
+display_output <- function(dataset, out_type, filter_opt = 'none') {
+  
+  if (out_type == "html") {
+    out_table <- DT::datatable(dataset, filter = filter_opt)
+  } else {
+    out_table <- knitr::kable(dataset)
+  } 
+  
+  out_table
+}
+```
+
+```{r data, include=F}
+rm(list = ls())
+source("Workstation.R")
+```  
+  
+## Introduction
+
+### A. Purpose  
+  
+It is important for schools to meet the needs of all students equally. The purpose of this study is visualize performance of commonly marginalized demographics to ensure the school is performing in line with this standard. Further, it has been hypothesized that some of the primary schools in the district are hindering performance. Finally, in the event of an educational discrepancy, it is desired to identify students in need of further supports early in their high school career. It is proposed that performance on standardized test taken at the beginning of Freshman year can be used to identify these students. 
+
+### B. Aims  
+  
+1. Data visualization will be used to explore the data for any inconsistencies or patterns indicating a lack of equal opportunity for all children in the high school. In particular inequality based upon ethnicity, gender, or special needs. 
+2. Primary schools will be explored to determine if any inequalities in GPA and state assessment performance. 
+3. Relationship between GPA and Standardized test scores will be explored to determine correlation could be used to identify students in need of support. 
+
+### C. Summary
+
+Exploration of the data indicated three areas of concern. Fist, there appears to be an under performance by males particularly from specific primary schools. Second, an overall under performance by black students, particularly those that transfer to the district after primary school. Last, also within students that transfer to the district, students with a Hispanic ethnicity under perform in GPA.  
+Visual examination indicates that correlation between GPA and standardized assessments could be used to identify students in need of extra support.
+
+## Data Sources 
+
+All data was collected from students at a high school of interest over a 3 year span (2015-2018).  They were selected by enrolling in a specific, required Geometry class (first semester). 
+
+### Data Description 
+
+Included in the data set for each selected student is their GPA at the completion of their Geometry class (**GPA**), the elementary school they attended (**School**), if they had ever been flagged for special services- English language learner, behavior plan, or 504 (**Flag**)-, the students gender (**Sex**), and the students race (**Race**). Each individuals students performance on the ACT Aspire, taken during their $9^{th}$ grade year, is also recorded.  Performance in **English**, **Math**, **Reading**, and **Science** are assessed (scaled 400 to 460).   
+"School" is coded to correspond to the elementary schools within the school district (1-4), with "5" corresponding to those individuals that transferred to the district after elementary school.  If an individual attended multiple elementary schools the one most attended during the primary years was chosen.   
+"Flag" is coded: 1 if "yes", 0 if "no." To preserve privacy students will be designated with a random ID number (**ID**).  
+  
+* GPA is a continuous variable with no missing values.  
+* School is a nominal variable with no missing values.  
+* English, Math, Reading, and Science are continuous variables. English has 7 missing values, Math and  Reading has 19 missing values, and Science has 18 missing values.
+  
+* Flag is a nominal dummy variable with no missing values.  
+* Sex is a nominal variable with no missing values.  
+* Race is a nominal variable with no missing values. 
+
+## Preliminary Analysis
+  
+To address the missing values a variation of mean imputation will be implemented. Since a students performance on one assessment is likely to be a decent indicator of the students performance on other assessments, we will use this idea to fill in missing values for subjects with at least one assessment recorded. For each observation with a missing value, the mean of the subjects recorded assessments are imputed. This handles 23 of the missing values.   
+A boxplot of the assessment scores indicated a data entry error (appendix). Two observations had values less than 400 which is impossible due to the range of scoring. It is not possible to determine the correct scores, therefore, these observations will be dropped from the data.  
+After dropping the data errors, boxplots indicate 4 or 5 possible outliers. These scores are within the range of possible scores and should be included in the data. There does not appear to be any outliers in any other variables.  
+The catagorical variables are tablulated to check for sparse data (appendix). It shows that under Ethnicity there are only 5 observations for asians.  This could cause issues during analysis so a seperate dataset is created where ethnicities are merged so that there is a "white" and "other" level. This was chosen because it divided the dataset the most evenly. 
+The number of observations for school may also be a bit small for school "1" depending on analysis. This will be addressed if necessary. There did not seem to be issues in any of the other categories.  
+A scatterplot matrix of the continuous variables indicates a strong correlation between all variables (appendix). This shows a potential for a model being built to predict GPA.  Boxplots appear to indicate a difference in GPA based upon Gender. When broken down by school, school "2" appears to show significant difference in GPA based on Gender (appendix). 
+There is also an obvious difference for Ethnicity corresponding to "Asian" but due to the sparse data it is likely incidental (appendix).  
+  
+## Visual Analysis
+### Black Inequallity 
+  
+A plot of GPA by average standardized assessment score appears to highlight some potential issues with ethnicity. Black students cluster on the left side, indicating poor performance on standardized test.  
+
+```{r GPA AVG}
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity, shape=Sex))+
+  theme_bw()+
+  labs(shape = "Gender", 
+       x= "Average Standardized Assessment Score",
+       title = "Student GPA by Average Standardized Assessment Score, Ethnicity, And Gender")
+```  
+  
+Looking at scores across assessment topics, there is a strong clustering below a score of 420 in Math, Science, and Reading. Within this range there is a wide range in GPA. This indicates a lack of preparedness for the standardized test for black students.  
+
+```{r black assess}
+pj_melt %>%
+  ggplot(aes(value, GPA))+
+  geom_point(aes(color = Ethnicity))+
+  scale_color_manual(values = c("black","green","black", "black"))+
+  facet_wrap(.~variable)+
+  labs(x="Standardized Assessment Score",
+      title = "Black Student Performance by Standardized Test")+
+  theme_bw()
+```  
+  
+  
+Looking at scores across primary schools shows that only 1 student that attended primary school in district average a score over 420. Exceptionallities do not appear to have any influence on this pattern.  
+  
+
+```{r black assess by school}
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity, shape=Flag))+
+  scale_color_manual(values = c("black","green","black", "black"))+
+  facet_wrap(.~School)+ 
+  labs(x= "Average Standardized Assessment Score",
+       title = "Black Student Performance by Primary School")+
+  theme_bw()
+```  
+  
+### Hispanic Transfer Inequallity 
+  
+Examining performance across schools by ethnicity identifies another potential issue. School 5 - student that transfer to the district after Primary School- has a low GPA for hispanic students. Average standardized test scores have a wide spread while GPA remains low for a concentration of several hispanic students. Many of the hispanic students score as expect but there is a high concentration with a low GPA. Exceptionallities do not appear to have any influence on this pattern.  
+
+```{r ethnic by school}
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(shape=Sex, color=Ethnicity))+
+  facet_wrap(.~School)+
+  labs(shape = "Gender", x= "Average Standardized Assessment Score",
+       title = "GPA by Average Standardized Score and School")+
+  theme_bw()
+
+pj_orig[pj_orig$School== "5",] %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity, shape = Flag))+
+  scale_color_manual(values = c("black","black","blue", "black"))+
+  labs(shape = "Flag", x= "Average Standardized Assessment Score",
+       title = "Hispanic Students Performance for Primary School 5 (Non-District Transfer)")+
+  theme_bw()
+
+```  
+
+### Primary School Issues
+  
+Examining performance across school indicates an issue with primary school 2.  There is a high concentration of low GPA for Males but a wide range of Average Standardized Assessment scores for the same observations.  Neither exceptionallities nor ethnicity appear to have any influence on this pattern.  
+
+```{r primary school 2}
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(shape=Sex, color=Ethnicity))+
+  facet_wrap(.~School)+
+  labs(shape = "Gender", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Primary School")+
+  theme_bw()
+
+pj_orig[pj_orig$School == "2",] %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Sex, shape= Flag))+
+  labs(shape = "Flag", x= "Average Standardized Assessment Score",
+       title = "Student Performance for Primary School 2 by Gender")+
+  theme_bw()
+
+pj_clean %>%
+  ggplot(aes(Sex, GPA))+
+    geom_boxplot()+
+    facet_grid(.~School)+
+    labs(
+      title = "Boxplot of GPA by Gender and Elementary School Attended", 
+      x = "School", y= "GPA")+
+    theme_bw()
+```  
+  
+  
+### Exceptionallities
+  
+Examining performance across primary schools by exceptionallities show no issues.  
+
+
+```{r exceptionallities}
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Flag))+
+  facet_wrap(.~School)+
+   labs(color = "Flag", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Primary School and Exceptionalities")+
+  theme_bw()
+```
+
+### Predicting GPA  
+  
+There appears to be be a strong correlation between standardized test scores and GPA which could be used to predict GPA.  Plotting GPA by standardized test indicates that each assessment would produce similar results (none have a larger effect than the other), so the average score will be used. 
+Controlling for exceptionallities, gender, ethnicity and school indicates there is no significant change in the prediction line outside of primary school attended. Ethnicity is sparse for several levels so more data should be collected to properly determine influence.
+
+```{r predicting GPA}
+pj_melt %>%
+  ggplot(aes(value, GPA))+
+  geom_point(aes(color=Ethnicity))+
+  geom_smooth(aes(value, GPA), method="lm")+
+  facet_wrap(.~variable)+
+  labs(color = "Ethnicity", x= "Standardized Assessment Score",
+       title = "Student Performance by Standardized Assessment")+
+  theme_bw()
+
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity))+
+  geom_smooth(aes(Avg, GPA), method="lm")+
+  facet_wrap(.~Flag)+
+  labs(color = "Ethnicity", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Exceptionallity")+
+  theme_bw()
+
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity))+
+  geom_smooth(aes(Avg, GPA), method="lm")+
+  facet_wrap(.~Sex)+
+  labs(color = "Ethnicity", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Gender")+
+  theme_bw()
+
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Sex))+
+  geom_smooth(aes(Avg, GPA), method="lm")+
+  facet_wrap(.~Ethnicity)+
+  labs(color = "Ethnicity", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Ethnicity")+
+  theme_bw()
+
+pj_orig %>%
+  ggplot(aes(Avg, GPA))+
+  geom_point(aes(color=Ethnicity, shape= Flag))+
+  geom_smooth(aes(Avg, GPA), method="lm")+
+  facet_wrap(.~School)+
+  labs(color = "Ethnicity", x= "Average Standardized Assessment Score",
+       title = "Student Performance by Primary School")+
+  theme_bw()
+
+```  
+
+## Conclusions  
+  
+There is a clear issue with black students performance on standardized assessments. It is clear that the issue lies in the district due to many students that transferred into district after primary school performed much better while only one from within the district performed above the 420 threshold. Further information, such as socio-economic status should be collected to identify the cause of this issue.  
+The issue with low performing Hispanic transfers may be an anomaly. Considering the district has a large immigrant population it is possible that these students are unidentified ELL or ESL students.  
+The discrepancy in GPA based on gender for students that attended primary school "2" appears to be a clear issue. Again, there are many factors that could be at play to cause this issue but given it is based upon a specific region it is likely to be caused by other environmental factors. 
+Based on the collection of scatter plots there is a clear correlation between standardized test and GPA, with the primary school attended being the most influential. There appears to be predictive power but further analysis should be performed to determine what variables would be most useful in building a predictive model. 
+
+
+## Appendix
+```{r appendix}
+#missing values mean imputation
+mrow <- pj[!complete.cases(pj),][1]
+for(i in 1:length(mrow[[1]])) { 
+  ifelse(is.na(pj[mrow[[1]][i],c(4:7)]),
+     pj[mrow[[1]][i],c(4:7)] <- round(rowMeans(pj[mrow[[1]][i],c(4:7)], na.rm = T),0),"") 
+}
+
+#removing remainder of missing values 
+rem <- pj[is.nan(pj$English),][,1]
+pj_clean <- pj[-rem,]
+pj_melt <- melt(pj_clean, measure.vars = c("English", "Math", "Science", "Reading"))
+
+pj_melt %>%
+  ggplot(aes(variable, value))+
+    geom_boxplot()+
+    theme_bw()+
+    labs(title = "Boxplot of Test Scores with Errors", x = "Test", y= "Score")
+
+#removing errors
+pj_melt <- pj_melt[-which(pj_melt$value<400),]
+pj_clean <- pj_clean[-c(which(pj_clean$Math<400), which(pj_clean$English<400),
+                  which(pj_clean$Science<400),which(pj_clean$Reading<400)),]
+
+pj_melt$Flag <- factor(pj_melt$Flag)
+levels(pj_melt$Flag) <- c("No Exceptionality","Exceptionality")
+pj_melt$Ethnicity <- factor(pj_melt$Ethnicity)
+levels(pj_melt$Ethnicity) <- c("Asian", "Black", "Hispanic","White")
+pj_melt$Sex <- factor(pj_melt$Sex)
+levels(pj_melt$Sex) <- c("Female","Male")
+pj_melt$School <- factor(pj_melt$School)
+
+pj_clean$Flag <- factor(pj_clean$Flag)
+levels(pj_clean$Flag) <- c("No Exceptionality","Exceptionality")
+pj_clean$Ethnicity <- factor(pj_clean$Ethnicity)
+levels(pj_clean$Ethnicity) <- c("Asian", "Black", "Hispanic","White")
+pj_clean$Sex <- factor(pj_clean$Sex)
+levels(pj_clean$Sex) <- c("Female","Male")
+pj_clean$School <- factor(pj_clean$School)
+pj_clean$Avg <- rowMeans(pj_clean[c(4:7)])
+pj_orig <- pj_clean
+
+levels(pj_clean$Ethnicity) <- c("Asian", "Black", "Hispanic","White", "Other")
+pj_clean$Ethnicity[pj_clean$Ethnicity == "Asian" | pj_clean$Ethnicity == "Black" | pj_clean$Ethnicity == "Hispanic"] <- "Other"
+
+pj_clean$Ethnicity <- factor(pj_clean$Ethnicity)
+levels(pj_clean$Ethnicity) <- c("White","Other")
+
+pj_melt %>%
+  ggplot(aes(variable, value))+
+    geom_boxplot()+
+    theme_bw()+ 
+    labs(title = "Boxplot of Test Scores", x = "Test", y= "Score")
+
+pj_orig %>%
+  ggplot(aes(Ethnicity, GPA))+
+    geom_boxplot()+
+    theme_bw()+ 
+    labs(title = "Boxplot of GPA by Ethnicity", x = "Ethnicity", y= "GPA")
+
+rt <- table(pj_orig$Ethnicity)
+kable(rt, col.names = c("Ethnicity", "Count"))
+
+pj_clean %>%
+  ggplot(aes(Ethnicity, GPA))+
+    geom_boxplot()+
+    theme_bw()+ 
+    labs(title = "Boxplot of GPA by Ethnicity", x = "Ethnicity", y= "GPA")
+
+rt_clean <- table(pj_clean$Ethnicity)
+kable(rt_clean, col.names = c("Ethnicity", "Count"))
+
+pj_clean %>%
+  ggplot(aes(Sex, GPA))+
+    geom_boxplot()+
+    labs(title = "Boxplot of GPA by Gender", x = "Gender", y= "GPA")+
+    theme_bw() 
+
+gt <- table(pj_clean$Sex)
+kable(gt, col.names = c("Sex", "Count"))
+
+pj_orig %>%
+  ggplot(aes(Flag, GPA))+
+    geom_boxplot()+
+    labs(title = "Boxplot of GPA by Exceptionality", x = "Exceptionality", y= "GPA")+
+    theme_bw() 
+
+ft <- table(pj_clean$Flag)
+kable(ft, col.names = c("Flagged for Services", "Count"))
+
+pj_clean %>%
+  ggplot(aes(School, GPA))+
+    geom_boxplot()+
+    labs(title = "Boxplot of GPA by Elementary School Attended", x = "School", y= "GPA")+
+    theme_bw()
+
+st <- table(pj_clean$School)
+kable(st, col.names = c("School", "Count"))
+
+pj_clean %>%
+  ggplot(aes(Sex, GPA))+
+    geom_boxplot()+
+    facet_grid(.~School)+
+    labs(title = "Boxplot of GPA by Gender and Elementary School Attended", x = "School", y= "GPA")+
+    theme_bw() 
+    
+kable(table(pj_clean$Sex,pj_clean$School), caption = "Gender by Elementary School Attended")
+
+pairs(pj_clean[,c(2,4:7)])
+```
+
+```{r interactive}
+######### Assessment inequality by race/Gender
+test <- sort(unique(pj_melt$variable))
+flag <- unique(pj_melt$Flag)
+
+ui = fluidPage(
+  titlePanel("GPA by Standardized Assessment Score"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "assessment",
+                  h3("Assessment"),
+                  choices = test,
+                  selected = 1),
+      selectInput(inputId = "flag",
+                  h3("Flag"),
+                  choices =  flag,
+                  selected = 1)
+    ),
+    mainPanel(
+      plotOutput(outputId = "scorePlot")
+    )
+  )
+)
+
+server = function(input, output) {
+  output$scorePlot = renderPlot({
+    
+    ggplot(pj_melt[pj_melt$variable == input$assessment & pj_melt$Flag == input$flag,]) +
+      geom_point(aes(x = value,
+                     y = GPA,
+                     shape = Sex,
+                     color = Ethnicity))+
+      theme_bw() +
+      labs(x = "Standardized Assessment Score", 
+           y = "GPA",
+           color = "Ethnicity",
+           shape = "Gender") +
+      xlim(c(400, 450)) +
+      ylim(c(0, 4)) +
+      geom_smooth(method = "lm", aes(x=value, y=GPA))
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+###### GPA and Average Assessment by School
+school <- sort(unique(pj_orig$School))
+sex <- unique(pj_orig$Sex)
+
+ui = fluidPage(
+  titlePanel("GPA by Standardized Assessment Average"),
+  
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "school",
+                  h3("Primary School"),
+                  choices = school,
+                  selected = 1),
+      selectInput(inputId = "gender",
+                  h3("Gender"),
+                  choices =  sex,
+                  selected = 1)
+    ),
+    mainPanel(
+      plotOutput(outputId = "avgPlot")
+    )
+  )
+)
+
+server = function(input, output) {
+  output$avgPlot = renderPlot({
+    
+    ggplot(pj_orig[pj_orig$School == input$school & pj_orig$Sex == input$gender,]) +
+      geom_point(aes(x = Avg,
+                     y = GPA,
+                     shape = Flag,
+                     color = Ethnicity))+
+      theme_bw() +
+      labs(x = "Average Standardized Assessment Score", 
+           y = "GPA",
+           color = "Ethnicity") +
+      xlim(c(400, 450)) +
+      ylim(c(0, 4)) +
+      geom_smooth(method = "lm", aes(x=Avg, y=GPA))
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
