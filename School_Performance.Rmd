@@ -11,7 +11,6 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-setwd("C:/Users/brake/OneDrive/Documents/Masters/824 Data Visuals/Semester Project")
 library(readxl)
 library(dplyr)
 library(reshape2)
@@ -41,6 +40,7 @@ display_output <- function(dataset, out_type, filter_opt = 'none') {
 
 ```{r data, include=F}
 rm(list = ls())
+#edit file path to source project workstation.
 source("Workstation.R")
 ```  
   
@@ -374,93 +374,3 @@ kable(table(pj_clean$Sex,pj_clean$School), caption = "Gender by Elementary Schoo
 pairs(pj_clean[,c(2,4:7)])
 ```
 
-```{r interactive}
-######### Assessment inequality by race/Gender
-test <- sort(unique(pj_melt$variable))
-flag <- unique(pj_melt$Flag)
-
-ui = fluidPage(
-  titlePanel("GPA by Standardized Assessment Score"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(inputId = "assessment",
-                  h3("Assessment"),
-                  choices = test,
-                  selected = 1),
-      selectInput(inputId = "flag",
-                  h3("Flag"),
-                  choices =  flag,
-                  selected = 1)
-    ),
-    mainPanel(
-      plotOutput(outputId = "scorePlot")
-    )
-  )
-)
-
-server = function(input, output) {
-  output$scorePlot = renderPlot({
-    
-    ggplot(pj_melt[pj_melt$variable == input$assessment & pj_melt$Flag == input$flag,]) +
-      geom_point(aes(x = value,
-                     y = GPA,
-                     shape = Sex,
-                     color = Ethnicity))+
-      theme_bw() +
-      labs(x = "Standardized Assessment Score", 
-           y = "GPA",
-           color = "Ethnicity",
-           shape = "Gender") +
-      xlim(c(400, 450)) +
-      ylim(c(0, 4)) +
-      geom_smooth(method = "lm", aes(x=value, y=GPA))
-  })
-}
-
-shinyApp(ui = ui, server = server)
-
-###### GPA and Average Assessment by School
-school <- sort(unique(pj_orig$School))
-sex <- unique(pj_orig$Sex)
-
-ui = fluidPage(
-  titlePanel("GPA by Standardized Assessment Average"),
-  
-  sidebarLayout(
-    sidebarPanel(
-      selectInput(inputId = "school",
-                  h3("Primary School"),
-                  choices = school,
-                  selected = 1),
-      selectInput(inputId = "gender",
-                  h3("Gender"),
-                  choices =  sex,
-                  selected = 1)
-    ),
-    mainPanel(
-      plotOutput(outputId = "avgPlot")
-    )
-  )
-)
-
-server = function(input, output) {
-  output$avgPlot = renderPlot({
-    
-    ggplot(pj_orig[pj_orig$School == input$school & pj_orig$Sex == input$gender,]) +
-      geom_point(aes(x = Avg,
-                     y = GPA,
-                     shape = Flag,
-                     color = Ethnicity))+
-      theme_bw() +
-      labs(x = "Average Standardized Assessment Score", 
-           y = "GPA",
-           color = "Ethnicity") +
-      xlim(c(400, 450)) +
-      ylim(c(0, 4)) +
-      geom_smooth(method = "lm", aes(x=Avg, y=GPA))
-  })
-}
-
-shinyApp(ui = ui, server = server)
-```
