@@ -79,4 +79,8 @@ Run the R Markdown document (`school_performance.Rmd`) to generate the analysis 
 - `school_performance.html`: HTML file showing the completed knitting of the R Markdown document.
 - `flexboard_presentation.html`: HTML file showing a flexboard used for presentation.
 
+## Shiny Apps
+
+- https://mbrakenhoff.shinyapps.io/Assessment_Shiny/ : Shiny Interactive Visual for GPA by Assessment type. 
+- https://mbrakenhoff.shinyapps.io/School_Shiny/ : Shiny Interactive Visual comparing GPA by School.
 
